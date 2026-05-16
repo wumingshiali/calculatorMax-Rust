@@ -46,3 +46,14 @@ panic = "abort"
 [profile.dev]
 opt-level = 1
 debug = true
+
+[package.metadata.bundle]
+name = "Calculator Max"
+identifier = "com.calculator.max"
+version = "0.1.0"
+resources = []
+copyright = "Copyright (c) 2025"
+category = "Utilities"
+short_description = "A powerful calculator"
+long_description = "Calculator Max - A feature-rich calculator application"
+

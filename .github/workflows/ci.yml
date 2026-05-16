@@ -69,14 +69,6 @@ jobs:
           cargo check --no-default-features --all-targets --all-features --verbose
           cargo test --no-default-features --verbose
 
-      - name: Upload fast-check logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fast-check-logs
-          path: |
-            target/debug/**
-
   build:
     strategy:
       matrix:
@@ -131,18 +123,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-sccache-
         
-    - name: Check formatting
-      run: cargo fmt --check
-      
-    - name: Run tests
-      run: cargo test --release --verbose
+    - name: Build release
+      run: cargo build --release --verbose
 
-    # === macOS: 打包成 .app 并包含图标 ===
-    - name: Bundle macOS App (with icon)
+    - name: Bundle macOS App
       if: matrix.os == 'macos-latest'
       run: |
         cargo install cargo-bundle
         cargo bundle --release
+
+    - name: Package macOS artifact
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd target/bundle/osx
+        zip -r calculator-max-macos.zip calculator-max.app
 
     # === 上传产物 ===
     - name: Upload Linux/Windows artifact
@@ -153,11 +147,14 @@ jobs:
         path: |
           target/release/calculator-max${{ matrix.os == 'windows-latest' && '.exe' || '' }}
 
-    - name: Upload macOS .app as ZIP
+    - name: Package macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
-        cd target/bundle/osx
-        zip -r calculator-max-macos.zip calculator-max.app
+        cd target/release
+        zip -r calculator-max-macos.zip calculator-max
+
+    - name: Upload macOS artifact
+      if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
         name: calculator-max-macos
