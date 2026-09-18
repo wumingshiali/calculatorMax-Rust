@@ -141,7 +141,7 @@ jobs:
     # === 上传产物 ===
     - name: Upload Linux/Windows artifact
       if: matrix.os != 'macos-latest'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: calculator-max-${{ matrix.os }}
         path: |
@@ -155,7 +155,7 @@ jobs:
 
     - name: Upload macOS artifact
       if: matrix.os == 'macos-latest'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: calculator-max-macos
         path: target/bundle/osx/calculator-max-macos.zip
