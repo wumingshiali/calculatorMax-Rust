@@ -25,7 +25,7 @@ jobs:
           toolchain: stable
 
       - name: Install sccache
-        uses: mozilla/sccache-action@v0.0.4
+        uses: mozilla/sccache-action@v0.0.11
         with:
           version: "v0.7.4"
 
@@ -87,7 +87,7 @@ jobs:
         toolchain: stable
         
     - name: Install sccache
-      uses: mozilla/sccache-action@v0.0.4
+      uses: mozilla/sccache-action@v0.0.11
       with:
         version: "v0.7.4"
         
