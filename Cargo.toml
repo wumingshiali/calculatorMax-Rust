@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 # GUI框架 (optional to speed iterative builds)
 egui = { version = "0.28", optional = true }
-eframe = { version = "0.28", optional = true }
+eframe = { version = "0.37", optional = true }
 
 # 数学计算
 statrs = "0.17"
