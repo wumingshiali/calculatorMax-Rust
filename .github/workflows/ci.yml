@@ -85,6 +85,8 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
+        # 如果是 macOS，同时安装 Intel 和 Apple Silicon 的目标架构
+        targets: ${{ matrix.os == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
         
     - name: Install sccache
       uses: mozilla/sccache-action@v0.0.4
@@ -123,22 +125,36 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-sccache-
         
-    - name: Build release
+    # Windows 和 Linux 依旧保持原有的普通编译流程
+    - name: Build release (Non-macOS)
+      if: matrix.os != 'macos-latest'
       run: cargo build --release --verbose
 
+    # macOS 编译通用二进制文件（合并 Intel 与 Apple 芯片架构）
+    - name: Build release (macOS Universal)
+      if: matrix.os == 'macos-latest'
+      run: |
+        cargo build --release --target aarch64-apple-darwin --verbose
+        cargo build --release --target x86_64-apple-darwin --verbose
+        mkdir -p target/release
+        lipo -create target/aarch64-apple-darwin/release/calculator-max target/x86_64-apple-darwin/release/calculator-max -output target/release/calculator-max
+
+    # 依旧使用你原本的方案：通过 cargo-bundle 打包成 macOS 专属的 .app 结构
     - name: Bundle macOS App
       if: matrix.os == 'macos-latest'
       run: |
         cargo install cargo-bundle
         cargo bundle --release
 
+    # 【修复的核心步骤】：打包真正完整的 .app，并输出至根目录，去除了原本多余且会覆盖文件的第二次打包
     - name: Package macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
         cd target/bundle/osx
-        zip -r calculator-max-macos.zip calculator-max.app
+        zip -r ../../../calculator-max-macos.zip calculator-max.app
 
     # === 上传产物 ===
+    # Linux / Windows 依旧保持原样上传
     - name: Upload Linux/Windows artifact
       if: matrix.os != 'macos-latest'
       uses: actions/upload-artifact@v7
@@ -147,15 +163,10 @@ jobs:
         path: |
           target/release/calculator-max${{ matrix.os == 'windows-latest' && '.exe' || '' }}
 
-    - name: Package macOS artifact
-      if: matrix.os == 'macos-latest'
-      run: |
-        cd target/release
-        zip -r calculator-max-macos.zip calculator-max
-
+    # macOS 修正了上传路径，直接上传根目录下完整生成的 zip 包
     - name: Upload macOS artifact
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v7
       with:
         name: calculator-max-macos
-        path: target/bundle/osx/calculator-max-macos.zip
+        path: calculator-max-macos.zip
