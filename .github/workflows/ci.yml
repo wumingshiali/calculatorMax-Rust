@@ -85,7 +85,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        # 如果是 macOS，同时安装 Intel 和 Apple Silicon 的目标架构
+        # 如果是 macOS，确保同时安装 Intel 和 Apple Silicon 的目标架构以生成通用二进制
         targets: ${{ matrix.os == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
         
     - name: Install sccache
@@ -130,28 +130,20 @@ jobs:
       if: matrix.os != 'macos-latest'
       run: cargo build --release --verbose
 
-    # macOS 编译通用二进制文件（合并 Intel 与 Apple 芯片架构）
-    - name: Build release (macOS Universal)
-      if: matrix.os == 'macos-latest'
-      run: |
-        cargo build --release --target aarch64-apple-darwin --verbose
-        cargo build --release --target x86_64-apple-darwin --verbose
-        mkdir -p target/release
-        lipo -create target/aarch64-apple-darwin/release/calculator-max target/x86_64-apple-darwin/release/calculator-max -output target/release/calculator-max
-
-    # 依旧使用你原本的方案：通过 cargo-bundle 打包成 macOS 专属的 .app 结构
-    - name: Bundle macOS App
+    # 【优化】：在 macOS 上直接通过 cargo-bundle 一键编译加打包成全芯片通用的 App
+    - name: Bundle macOS App (Universal)
       if: matrix.os == 'macos-latest'
       run: |
         cargo install cargo-bundle
-        cargo bundle --release
+        # 使用 -t 同时指定两个架构，cargo-bundle 会自动用 lipo 融合成 Universal 架构并生成 .app
+        cargo bundle --release -t aarch64-apple-darwin -t x86_64-apple-darwin
 
-    # 【修复的核心步骤】：打包真正完整的 .app，并输出至根目录，去除了原本多余且会覆盖文件的第二次打包
+    # 【修复路径】：多架构打包时，cargo-bundle 的标准输出目录固定为 target/universal-apple-darwin/release/bundle/osx/
     - name: Package macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
-        cd target/bundle/osx
-        zip -r ../../../calculator-max-macos.zip calculator-max.app
+        cd target/universal-apple-darwin/release/bundle/osx
+        zip -r ../../../../../calculator-max-macos.zip calculator-max.app
 
     # === 上传产物 ===
     # Linux / Windows 依旧保持原样上传
@@ -163,7 +155,7 @@ jobs:
         path: |
           target/release/calculator-max${{ matrix.os == 'windows-latest' && '.exe' || '' }}
 
-    # macOS 修正了上传路径，直接上传根目录下完整生成的 zip 包
+    # macOS 直接上传根目录下完美打包好的真实 zip 包
     - name: Upload macOS artifact
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v7
