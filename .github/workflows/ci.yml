@@ -130,15 +130,15 @@ jobs:
       if: matrix.os != 'macos-latest'
       run: cargo build --release --verbose
 
-    # macOS 直接使用免编译一键安装工具，自动进行双架构编译
+    # macOS 编译与打包：换回 100% 稳定的本地安装，避免 DNS 域名解析报错影响构建
     - name: Bundle macOS App (Universal)
       if: matrix.os == 'macos-latest'
       run: |
-        curl -L --proto '=https' --tlsv1.2 -sSf https://githubusercontent.com | sh
-        cargo binstall -y cargo-bundle
+        cargo install cargo-bundle
+        # 使用 -t 同时指定两个架构，自动用 lipo 融合成 Universal 架构并生成 .app
         cargo bundle --release -t aarch64-apple-darwin -t x86_64-apple-darwin
 
-    # 【核心修复】：动态寻找生成的 calculator-max.app 路径并打包，彻底解决路径硬编码导致的报错
+    # 【核心保留】：通过 find 动态寻找生成的 calculator-max.app 路径并打包，解决目录不确定问题
     - name: Package macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
