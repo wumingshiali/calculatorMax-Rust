@@ -130,20 +130,30 @@ jobs:
       if: matrix.os != 'macos-latest'
       run: cargo build --release --verbose
 
-    # 【优化】：在 macOS 上直接通过 cargo-bundle 一键编译加打包成全芯片通用的 App
+    # macOS 直接使用免编译一键安装工具，自动进行双架构编译
     - name: Bundle macOS App (Universal)
       if: matrix.os == 'macos-latest'
       run: |
-        cargo install cargo-bundle
-        # 使用 -t 同时指定两个架构，cargo-bundle 会自动用 lipo 融合成 Universal 架构并生成 .app
+        curl -L --proto '=https' --tlsv1.2 -sSf https://githubusercontent.com | sh
+        cargo binstall -y cargo-bundle
         cargo bundle --release -t aarch64-apple-darwin -t x86_64-apple-darwin
 
-    # 【修复路径】：多架构打包时，cargo-bundle 的标准输出目录固定为 target/universal-apple-darwin/release/bundle/osx/
+    # 【核心修复】：动态寻找生成的 calculator-max.app 路径并打包，彻底解决路径硬编码导致的报错
     - name: Package macOS artifact
       if: matrix.os == 'macos-latest'
       run: |
-        cd target/universal-apple-darwin/release/bundle/osx
-        zip -r ../../../../../calculator-max-macos.zip calculator-max.app
+        # 寻找 calculator-max.app 所在的绝对路径
+        APP_PATH=$(find target -type d -name "calculator-max.app" | head -n 1)
+        if [ -z "$APP_PATH" ]; then
+          echo "Error: calculator-max.app not found!"
+          exit 1
+        fi
+        echo "Found app at: $APP_PATH"
+        # 进入该目录的上一级，执行压缩
+        cd "$(dirname "$APP_PATH")"
+        zip -r "../../../../calculator-max-macos.zip" calculator-max.app
+        # 将生成的压缩包移动到当前工作流根目录以便后续上传
+        mv "../../../../calculator-max-macos.zip" "$GITHUB_WORKSPACE/"
 
     # === 上传产物 ===
     # Linux / Windows 依旧保持原样上传
