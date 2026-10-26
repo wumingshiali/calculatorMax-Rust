@@ -12,7 +12,7 @@ eframe = { version = "0.28", optional = true }
 
 # 数学计算
 statrs = "0.17"
-rand = "0.9"
+rand = "0.10"
 
 # 表达式解析
 meval = "0.2"
